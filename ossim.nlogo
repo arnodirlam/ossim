@@ -1,8 +1,93 @@
+breed [ users user ]
+breed [ repos repo ]
+
+
+
+;     AGENT ATTRIBUTES
+; ------------------------
+
+; user
+; attributes of each user
+users-own [
+  u-age ; number of ticks in which this link existed
+  u-category ; one of (1) generalist, (2) specialist, (3) networker, (4) casual
+  u-commits ; total number of commits by this user
+  u-commits-this-tick ; number of commits in the current tick by this user
+]
+
+; repo
+; attributes of each repo
+repos-own [
+  r-age ; numbber of ticks in which this link existed
+  r-commits ; total number of commits to this repo
+  r-commits-this-tick ; number of commits in the current tick to this repo
+]
+
+; user <-> repo
+; attributes of each link between a user and a repo
+links-own [
+  l-age ; numbber of ticks in which this link existed
+  l-commits ; total number of commits by the user to the repo
+  l-commits-this-tick ; number of commits in the current tick by the user to the repo
+]
+
+
+
+;     CORE FUNCTIONS
+; ----------------------
+
+to setup
+  
+  ;; (for this model to work with NetLogo's new plotting features,
+  ;; __clear-all-and-reset-ticks should be replaced with clear-all at
+  ;; the beginning of your setup procedure and reset-ticks at the end
+  ;; of the procedure.)
+  __clear-all-and-reset-ticks
+
+  set-default-shape users "person"
+  set-default-shape repos "box"
+
+  ; add initiali users
+  add-users nInitialUsers
+
+  reset-ticks
+end
+
+to go
+  tick
+  increment-age
+end
+
+
+
+;     SUB FUNCTIONS
+; ---------------------
+
+; increase age of existing users, repos, and links
+to increment-age
+  ask users [ set u-age u-age + 1 ]
+  ask repos [ set r-age r-age + 1 ]
+  ask links [ set l-age l-age + 1 ]
+end
+
+; create and initialize new users
+to add-users [ number ]
+  ; probabilities: 5% generalist, 15% specialist, 20% networker, 60% casual
+  let categories [ "generalist" "specialist" "specialist" "specialist" "networker" "networker" "networker" "networker" "casual" "casual" "casual" "casual" "casual" "casual" "casual" "casual" "casual" "casual" "casual" "casual"]
+
+  create-users number [
+    ; initialize each new user
+    setxy random-pxcor random-pycor
+
+    ; pick a category
+    set u-category one-of categories
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+618
 10
-649
+1057
 470
 16
 16
@@ -25,6 +110,138 @@ GRAPHICS-WINDOW
 1
 ticks
 30.0
+
+SLIDER
+33
+84
+205
+117
+nInitialUsers
+nInitialUsers
+0
+100
+10
+1
+1
+Users
+HORIZONTAL
+
+BUTTON
+34
+141
+97
+174
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+109
+141
+184
+174
+go once
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+197
+141
+260
+174
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+MONITOR
+383
+100
+457
+145
+Generalists
+count users with [ u-category = \"generalist\" ]
+17
+1
+11
+
+MONITOR
+457
+100
+527
+145
+Specialists
+count users with [ u-category = \"specialist\" ]
+17
+1
+11
+
+MONITOR
+383
+145
+457
+190
+Networkers
+count users with [ u-category = \"networker\" ]
+17
+1
+11
+
+MONITOR
+457
+145
+527
+190
+Casual users
+count users with [ u-category = \"casual\" ]
+17
+1
+11
+
+MONITOR
+384
+223
+459
+268
+Repositories
+count repos
+17
+1
+11
+
+MONITOR
+459
+223
+540
+268
+Total Commits
+sum [ r-commits ] of repos
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
