@@ -1,6 +1,10 @@
 breed [ users user ]
 breed [ repos repo ]
 
+globals [
+  total-commits
+  commits-this-round
+]
 
 
 ;     AGENT ATTRIBUTES
@@ -12,7 +16,7 @@ users-own [
   u-age ; number of ticks in which this link existed
   u-category ; one of (1) generalist, (2) specialist, (3) networker, (4) casual
   u-commits ; total number of commits by this user
-  u-commits-this-tick ; number of commits in the current tick by this user
+  u-commits-this-round ; number of commits in the current tick by this user
 ]
 
 ; repo
@@ -20,7 +24,7 @@ users-own [
 repos-own [
   r-age ; numbber of ticks in which this link existed
   r-commits ; total number of commits to this repo
-  r-commits-this-tick ; number of commits in the current tick to this repo
+  r-commits-this-round ; number of commits in the current tick to this repo
 ]
 
 ; user <-> repo
@@ -28,7 +32,7 @@ repos-own [
 links-own [
   l-age ; numbber of ticks in which this link existed
   l-commits ; total number of commits by the user to the repo
-  l-commits-this-tick ; number of commits in the current tick by the user to the repo
+  l-commits-this-round ; number of commits in the current tick by the user to the repo
 ]
 
 
@@ -47,6 +51,10 @@ to setup
   set-default-shape users "person"
   set-default-shape repos "box"
 
+  ; reset gobal variables
+  set total-commits 0
+  set commits-this-round 0
+
   ; add initiali users
   add-users nInitialUsers
 
@@ -54,8 +62,9 @@ to setup
 end
 
 to go
+  init-round
   tick
-  increment-age
+  user-actions
 end
 
 
@@ -63,12 +72,96 @@ end
 ;     SUB FUNCTIONS
 ; ---------------------
 
-; increase age of existing users, repos, and links
-to increment-age
-  ask users [ set u-age u-age + 1 ]
-  ask repos [ set r-age r-age + 1 ]
-  ask links [ set l-age l-age + 1 ]
+; 
+to init-round
+  set total-commits total-commits + commits-this-round
+  set commits-this-round 0
+  ask users [
+    set u-commits u-commits + u-commits-this-round
+    set u-commits-this-round 0
+    set u-age u-age + 1
+  ]
+  ask repos [
+    set r-commits r-commits + r-commits-this-round
+    set r-commits-this-round 0
+    set r-age r-age + 1
+  ]
+  ask links [
+    set l-commits l-commits + l-commits-this-round
+    set l-commits-this-round 0
+    set l-age l-age + 1
+  ]
 end
+
+; perform action of all users
+to user-actions
+  ask users [
+    let user self
+    let u-repos count my-links
+    let create-repo-prob 0
+    let join-repo-prob 0
+
+    if u-category = "generalist" [
+      ; each repo -> contribute again?
+      ask link-neighbors [
+        let repo self
+        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+          user-commits-to-repo user repo
+        ]
+      ]
+      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+    ]
+
+    if u-category = "specialist" [
+      ; each repo -> contribute again?
+      ask link-neighbors [
+        let repo self
+        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+          user-commits-to-repo user repo
+        ]
+      ]
+      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+    ]
+
+    if u-category = "networker" [
+      ; each repo -> contribute again?
+      ask link-neighbors [
+        let repo self
+        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+          user-commits-to-repo user repo
+        ]
+      ]
+      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+    ]
+
+    if u-category = "casual" [
+      ; each repo -> contribute again?
+      ask link-neighbors [
+        let repo self
+        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+          user-commits-to-repo user repo
+        ]
+      ]
+      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+    ]
+
+    if random(100) < create-repo-prob [
+      user-creates-repo user
+    ]
+
+    if random(100) < join-repo-prob [
+      user-joins-random-repo user
+    ]
+  ]
+end
+
+
+;     HELPER FUNCTIONS
+; ------------------------
 
 ; create and initialize new users
 to add-users [ number ]
@@ -81,7 +174,62 @@ to add-users [ number ]
 
     ; pick a category
     set u-category one-of categories
+
+    set u-age 0
+    set u-commits 0
+    set u-commits-this-round 0
   ]
+end
+
+to add-repo-of [ user ]
+  hatch-repos 1 [
+    ; initialize each new repo
+    setxy random-pxcor random-pycor
+    set r-age 0
+    set r-commits 0
+    set r-commits-this-round 0
+    create-link-with user [
+      set l-age 0
+      set l-commits 0
+      set l-commits-this-round 1
+    ]
+  ]
+end
+
+; number of all repos
+to-report total-repos
+  report count repos
+end
+
+to user-creates-repo [ user ]
+  add-repo-of user
+end
+
+to user-joins-repo [ user repo ]
+  user-commits-to-repo user repo
+end
+
+to user-joins-random-repo [ user ]
+  user-joins-repo user (one-of repos)
+end
+
+to user-commits-to-repo [ user repo ]
+  ask user [
+    ifelse link-with repo = nobody [
+      create-link-with repo [
+        set l-commits-this-round 1
+      ]
+    ] [
+      ask link-with repo [
+        set l-commits-this-round l-commits-this-round + 1
+      ]
+    ]
+    set u-commits-this-round u-commits-this-round + 1
+  ]
+  ask repo [
+    set r-commits-this-round r-commits-this-round + 1
+  ]
+  set commits-this-round commits-this-round + 1
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
