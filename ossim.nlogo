@@ -105,11 +105,16 @@ to user-actions
       ; each repo -> contribute again?
       ask link-neighbors [
         let repo self
+        ; formula for generalist to contribute again (in % points)
         if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
           user-commits-to-repo user repo
         ]
       ]
+
+      ; formula for generalist to create a new repo (in % points)
       set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+
+      ; formula for generalist to join a new repo (in % points)
       set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
     ]
 
@@ -117,36 +122,51 @@ to user-actions
       ; each repo -> contribute again?
       ask link-neighbors [
         let repo self
-        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+        ; formula for specialist to contribute again (in % points)
+        if random(100) < 40 - 2 * u-repos + 0.2 * r-commits + 0.02 * total-commits [
           user-commits-to-repo user repo
         ]
       ]
+
+      ; formula for specialist to create a new repo (in % points)
       set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
-      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+
+      ; formula for specialist to join a new repo (in % points)
+      set join-repo-prob 5 - 1.25 * u-repos + 0.01 * total-repos
     ]
 
     if u-category = "networker" [
       ; each repo -> contribute again?
       ask link-neighbors [
         let repo self
-        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+        ; formula for networker to contribute again (in % points)
+        if random(100) < 10 - 0.5 * u-repos + 0.05 * r-commits + 0.005 * total-commits [
           user-commits-to-repo user repo
         ]
       ]
-      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
-      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+
+      ; formula for networker to create a new repo (in % points)
+      set create-repo-prob 10 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+
+      ; formula for networker to join a new repo (in % points)
+      set join-repo-prob 40 - 5 * u-repos + 0.01 * total-repos
     ]
 
     if u-category = "casual" [
       ; each repo -> contribute again?
       ask link-neighbors [
         let repo self
-        if random(100) < 20 - 1 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
+        ; formula for casual user to contribute again (in % points)
+        if random(100) < 5 - 0.25 * u-repos + 0.1 * r-commits + 0.01 * total-commits [
           user-commits-to-repo user repo
         ]
       ]
-      set create-repo-prob 20 - 5 * u-repos - 0.01 * total-repos + 0.01 * total-commits
-      set join-repo-prob 20 - 5 * u-repos + 0.01 * total-repos
+
+      ; formula for casual user to create a new repo (in % points)
+      set create-repo-prob 1 - 0.25 * u-repos - 0.01 * total-repos + 0.01 * total-commits
+
+      ; formula for casual user to join a new repo (in % points)
+      set join-repo-prob 5 - 1.25 * u-repos + 0.01 * total-repos
     ]
 
     if random(100) < create-repo-prob [
@@ -181,14 +201,14 @@ to add-users [ number ]
   ]
 end
 
-to add-repo-of [ user ]
+to add-repo-of [ u ]
   hatch-repos 1 [
     ; initialize each new repo
     setxy random-pxcor random-pycor
     set r-age 0
     set r-commits 0
     set r-commits-this-round 0
-    create-link-with user [
+    create-link-with u [
       set l-age 0
       set l-commits 0
       set l-commits-this-round 1
@@ -201,32 +221,32 @@ to-report total-repos
   report count repos
 end
 
-to user-creates-repo [ user ]
-  add-repo-of user
+to user-creates-repo [ u ]
+  add-repo-of u
 end
 
-to user-joins-repo [ user repo ]
-  user-commits-to-repo user repo
+to user-joins-repo [ u r ]
+  user-commits-to-repo u r
 end
 
-to user-joins-random-repo [ user ]
-  user-joins-repo user (one-of repos)
+to user-joins-random-repo [ u ]
+  user-joins-repo u (one-of repos)
 end
 
-to user-commits-to-repo [ user repo ]
-  ask user [
-    ifelse link-with repo = nobody [
-      create-link-with repo [
+to user-commits-to-repo [ u r ]
+  ask u [
+    ifelse link-with r = nobody [
+      create-link-with r [
         set l-commits-this-round 1
       ]
     ] [
-      ask link-with repo [
+      ask link-with r [
         set l-commits-this-round l-commits-this-round + 1
       ]
     ]
     set u-commits-this-round u-commits-this-round + 1
   ]
-  ask repo [
+  ask r [
     set r-commits-this-round r-commits-this-round + 1
   ]
   set commits-this-round commits-this-round + 1
